@@ -31,6 +31,17 @@ data:
     {{- $content | nindent 4 }}
   {{- end }}
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "trigger-v4.fullname" . }}-clickhouse
+  labels:
+    {{- $component := "clickhouse" }}
+    {{- include "trigger-v4.componentLabels" (dict "Chart" .Chart "Release" .Release "Values" .Values "component" $component) | nindent 4 }}
+type: Opaque
+data:
+  admin-password: {{ .Values.clickhouse.auth.password | b64enc | quote }}
+---
 {{- /* Reuse an existing data PVC instead of creating one via
        volumeClaimTemplates. Set explicitly through persistence.existingClaim,
        or detected automatically: upgrades from chart versions that bundled
@@ -63,6 +74,7 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ .Values.clickhouse.configdFiles | toYaml | sha256sum }}
+        checksum/secret: {{ .Values.clickhouse.auth.password | sha256sum }}
         {{- with .Values.clickhouse.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -89,7 +101,10 @@ spec:
             - name: CLICKHOUSE_USER
               value: {{ .Values.clickhouse.auth.username | quote }}
             - name: CLICKHOUSE_PASSWORD
-              value: {{ .Values.clickhouse.auth.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "trigger-v4.fullname" . }}-clickhouse
+                  key: admin-password
             - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
               value: "1"
           ports:
