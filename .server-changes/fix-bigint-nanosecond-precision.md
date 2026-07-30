@@ -3,4 +3,4 @@ area: webapp
 type: fix
 ---
 
-Timestamp precision is no longer lost when recording nanosecond-resolution span times. Previously, multiplying milliseconds by 1,000,000 in float-land before converting to BigInt produced slightly wrong timestamps for spans and run events.
+Fix nanosecond timestamps losing precision in retry event records. Previously, converting milliseconds to nanoseconds via float multiplication silently dropped precision above Number.MAX_SAFE_INTEGER; timestamps are now computed with BigInt arithmetic throughout.
